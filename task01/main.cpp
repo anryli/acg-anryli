@@ -3,6 +3,9 @@
 #include <cassert>
 #include <vector>
 #include <filesystem>
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 //
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -15,7 +18,7 @@ float area_of_a_triangle(
     float x0, float y0,
     float x1, float y1,
     float x2, float y2) {
-  return ((x1 - x2) * (y0 - y2) - (x0 - x2) * (y1 - y2)) * 0.5f;
+    return ((x1 - x2) * (y0 - y2) - (x0 - x2) * (y1 - y2)) * 0.5f;
 }
 
 /**
@@ -25,20 +28,20 @@ void draw_triangle(
     float x0, float y0,
     float x1, float y1,
     float x2, float y2,
-    std::vector<unsigned char> &img_data, unsigned int width, unsigned int height,
+    std::vector<unsigned char>& img_data, unsigned int width, unsigned int height,
     unsigned char brightness) {
-  for (unsigned int ih = 0; ih < height; ++ih) {
-    for (unsigned int iw = 0; iw < width; ++iw) {
-      const auto x = (float) iw + 0.5f;
-      const auto y = (float) ih + 0.5f;
-      const auto a01 = area_of_a_triangle(x, y, x0, y0, x1, y1);
-      const auto a12 = area_of_a_triangle(x, y, x1, y1, x2, y2);
-      const auto a20 = area_of_a_triangle(x, y, x2, y2, x0, y0);
-      if (a01 > 0.f && a12 > 0.f && a20 > 0.f) {
-        img_data[ih * height + iw] = brightness;
-      }
+    for (unsigned int ih = 0; ih < height; ++ih) {
+        for (unsigned int iw = 0; iw < width; ++iw) {
+            const auto x = (float)iw + 0.5f;
+            const auto y = (float)ih + 0.5f;
+            const auto a01 = area_of_a_triangle(x, y, x0, y0, x1, y1);
+            const auto a12 = area_of_a_triangle(x, y, x1, y1, x2, y2);
+            const auto a20 = area_of_a_triangle(x, y, x2, y2, x0, y0);
+            if (a01 > 0.f && a12 > 0.f && a20 > 0.f) {
+                img_data[ih * height + iw] = brightness;
+            }
+        }
     }
-  }
 }
 
 /**
@@ -47,31 +50,44 @@ void draw_triangle(
  * @param brightness brightness of the painted pixel
  */
 void draw_polygon(
-    const std::vector<float> &polygon_xy,
-    std::vector<unsigned char> &img_data, unsigned int width, unsigned int height,
+    const std::vector<float>& polygon_xy,
+    std::vector<unsigned char>& img_data, unsigned int width, unsigned int height,
     unsigned int brightness) {
-  for (unsigned int ih = 0; ih < height; ++ih) {
-    for (unsigned int iw = 0; iw < width; ++iw) {
-      const auto x = float(iw) + 0.5f; // x-coordinate of the center of the pixel
-      const auto y = float(ih) + 0.5f; // y-coordinate of the center of the pixel
-      const unsigned int num_vtx = polygon_xy.size() / 2;
-      float winding_number = 0.0;
-      for (unsigned int iedge = 0; iedge < num_vtx; ++iedge) {
-        unsigned int i0_vtx = iedge;
-        unsigned int i1_vtx = (iedge + 1) % num_vtx;
-        // positions of the end points of the edge relative to (x,y)
-        float p0x = polygon_xy[i0_vtx * 2 + 0] - x;
-        float p0y = polygon_xy[i0_vtx * 2 + 1] - y;
-        float p1x = polygon_xy[i1_vtx * 2 + 0] - x;
-        float p1y = polygon_xy[i1_vtx * 2 + 1] - y;
-        // write a few lines of code to compute winding number (hint: use atan2)
-      }
-      const int int_winding_number = int(std::round(winding_number));
-      if (int_winding_number == 1 ) { // if (x,y) is inside the polygon
-        img_data[ih*width + iw] = brightness;
-      }
+    for (unsigned int ih = 0; ih < height; ++ih) {
+        for (unsigned int iw = 0; iw < width; ++iw) {
+            const auto x = float(iw) + 0.5f; // x-coordinate of the center of the pixel
+            const auto y = float(ih) + 0.5f; // y-coordinate of the center of the pixel
+            const unsigned int num_vtx = polygon_xy.size() / 2;
+            float winding_number = 0.0;
+            for (unsigned int iedge = 0; iedge < num_vtx; ++iedge) {
+                unsigned int i0_vtx = iedge;
+                unsigned int i1_vtx = (iedge + 1) % num_vtx;
+                // positions of the end points of the edge relative to (x,y)
+                float p0x = polygon_xy[i0_vtx * 2 + 0] - x;
+                float p0y = polygon_xy[i0_vtx * 2 + 1] - y;
+                float p1x = polygon_xy[i1_vtx * 2 + 0] - x;
+                float p1y = polygon_xy[i1_vtx * 2 + 1] - y;
+                // write a few lines of code to compute winding number (hint: use atan2)
+                float a1 = atan2(p0x, p0y);
+                float a2 = atan2(p1x, p1y);
+                float a = a2 - a1;
+                if (a > M_PI)
+                {
+                    a -= 2 * M_PI;
+                }
+                if (a < -M_PI)
+                {
+                    a += 2 * M_PI;
+                }
+                winding_number += a;
+
+            }
+            const int int_winding_number = int(std::round(winding_number));
+            if (int_winding_number != 0) { // if (x,y) is inside the polygon
+                img_data[ih * width + iw] = brightness;
+            }
+        }
     }
-  }
 }
 
 /**
@@ -85,13 +101,27 @@ void draw_polygon(
 void dda_line(
     float x0, float y0,
     float x1, float y1,
-    std::vector<unsigned char> &img_data,
+    std::vector<unsigned char>& img_data,
     unsigned int width,
-    unsigned char brightness ) {
-  auto dx = x1 - x0;
-  auto dy = y1 - y0;
-  // write some code below to paint pixel on the line with color `brightness`
-}
+    unsigned char brightness) {
+    auto dx = x1 - x0;
+    auto dy = y1 - y0;
+    // write some code below to paint pixel on the line with color `brightness`
+        unsigned int steps = std::max(abs(dx), abs(dy));
+        float x_increment = dx / steps;
+        float y_increment = dy / steps;
+        float x = x0;
+        float y = y0;
+        for (unsigned int i = 0; i <= steps; ++i) {
+            int px = static_cast<int>(x + 0.5f);
+            int py = static_cast<int>(y + 0.5f);
+            if (px >= 0 && px < static_cast<int>(width) && py >= 0 && py < static_cast<int>(img_data.size() / width)) {
+                img_data[py * width + px] = brightness;
+            }
+            x += x_increment;
+            y += y_increment;
+        }
+    }
 
 int main() {
   constexpr unsigned int width = 100;
