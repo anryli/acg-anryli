@@ -77,7 +77,7 @@ int main() {
   }
   ::glUseProgram(shaderProgram); // use the shader program
   GLint iloc = glGetUniformLocation(shaderProgram, "is_reflection"); // shader program variable
-
+  
   ::glClearColor(1, 1, 1, 1);  // set the color to fill the frame buffer when glClear is called.
   ::glEnable(GL_DEPTH_TEST);
   while (!::glfwWindowShouldClose(window)) {

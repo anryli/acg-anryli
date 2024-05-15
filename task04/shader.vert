@@ -18,6 +18,8 @@ void main()
     if (is_reflection) {
         vec3 nrm = normalize(vec3(0.4, 0.0, 1.0)); // normal of the mirror
         vec3 org = vec3(-0.3, 0.0, -0.5); // point on the mirror
+
+        
         // wite code to change the input position (x0,y0,z0).
         // the transformed position (x0, y0, z0) should be drawn as the mirror reflection.
         //
@@ -27,7 +29,16 @@ void main()
         //x0 = ???
         //y0 = ???
         //z0 = ???
+
+        vec3 incident = vec3(x0, y0, z0);
+        vec3 reflection = incident - 2.0 * dot(incident - org, nrm) * nrm;
+
+            x0 = reflection.x;
+            y0 = reflection.y;
+            z0 = reflection.z;
+            z0+=0.3;
     }
+    
     // do not edit below
 
     // "gl_Position" is the *output* vertex coordinate in the

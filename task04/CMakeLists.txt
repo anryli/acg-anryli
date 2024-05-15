@@ -33,6 +33,8 @@ include_directories(${PROJECT_NAME}
   ${PROJECT_SOURCE_DIR}/../external/eigen
 )
 
+include_directories(${PROJECT_SOURCE_DIR}/../external/glad3/include)
+
 add_executable(${PROJECT_NAME}
   main.cpp
   ${PROJECT_SOURCE_DIR}/../external/glad3/src/glad.c
@@ -51,3 +53,4 @@ target_link_libraries(${PROJECT_NAME}
 GET_TARGET_PROPERTY(GLFW_INCLUDE_DIR
   glfw INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "task04 glfw include directory: ${GLFW_INCLUDE_DIR}")
+
