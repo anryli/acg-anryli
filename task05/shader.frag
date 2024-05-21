@@ -35,16 +35,53 @@ float box_size = 0.6; // size of box
 /// singed distance function at the position `pos`
 float SDF(vec3 pos)
 {
-  float d0 = sdCappedCylinder(pos, len_cylinder, rad_cylinder);
+  vec3 pos_cylinder1=pos.xyz;
+  float d0 = sdCappedCylinder(pos_cylinder1, len_cylinder, rad_cylinder);
+  vec3 pos_cylinder2 =pos.yzx;
+  float d1 = sdCappedCylinder(pos_cylinder2, len_cylinder, rad_cylinder);
+  vec3 pos_cylinder3=pos.zxy;
+  float d2 =  sdCappedCylinder(pos_cylinder3, len_cylinder, rad_cylinder);
+  float d3 = sdBox(pos,vec3(box_size));
+  float d4 = sdSphere(pos, rad_sphere);
+  float common = max(d3,d4);
+  float unionC = min(d0,min(d1,d2));
+  float object = max(common, -unionC);
+  
+  return object;
   // write some code to combine the signed distance fields above to design the object described in the README.md
-  return d0; // comment out and define new distance
+  //return d0; 
+  // comment out and define new distance
 }
 
 /// RGB color at the position `pos`
 vec3 SDF_color(vec3 pos)
 {
+    vec3 pos_cylinder1 = pos.xzy;
+    vec3 pos_cylinder2 = pos.yxz;
+    vec3 pos_cylinder3 = pos.zyx;
+    vec3 color_cylinder = vec3(0.0, 1.0, 0.0); 
+    vec3 color_box = vec3(0.0, 0.0, 1.0);      
+    vec3 color_sphere = vec3(1.0, 0.0, 0.0);    
+    float d0 = sdCappedCylinder(pos_cylinder1, len_cylinder, rad_cylinder);
+    float d1 = sdCappedCylinder(pos_cylinder2, len_cylinder, rad_cylinder);
+    float d2 = sdCappedCylinder(pos_cylinder3, len_cylinder, rad_cylinder);
+    float d3 = sdBox(pos, vec3(box_size)); 
+    float d4 = sdSphere(pos, rad_sphere);  
+    if (d0 < 0.0) {
+        return color_cylinder; 
+    } else if (d1 < 0.0) {
+        return color_cylinder; 
+    } else if (d2 < 0.0) {
+        return color_cylinder; 
+    } else if (d3 < 0.0) {
+        return color_box;      
+    } else if (d4 < 0.0) {
+        return color_sphere;   
+    } else {
+        return vec3(0.0);   
   // write some code below to return color (RGB from 0 to 1) to paint the object describe in README.md
-  return vec3(0., 1., 0.); // comment out and define new color
+  //return vec3(0., 1., 0.); // comment out and define new color
+    }
 }
 
 uniform float time; // current time given from CPU
