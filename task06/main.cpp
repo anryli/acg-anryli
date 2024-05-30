@@ -56,8 +56,14 @@ auto sample_hemisphere(
 
   // For Problem 4, write some code below to sample hemisphere with cosign weight
   // (i.e., the sampling frequency is higher at the top)
-
-
+  const float z = std::sqrt(1.f - unirand.x()); // cos(theta)
+  const float r = std::sqrt(1.f - z * z);
+  auto dir_loc = Eigen::Vector3f( // direction in normal coordinate
+      r * std::cos(phi),
+      r * std::sin(phi),
+      z);
+  float pdf = z / float(M_PI);
+  auto l2w_trans = local_to_world_vector_transformation(nrm);
   // end of Problem 4. Do not modify the two lines below
   const auto dir_out = local_to_world_vector_transformation(nrm) * dir_loc; // rotate the sample (zup -> nrm)
   return {dir_out, pdf};
@@ -124,13 +130,38 @@ void search_collision_in_bvh(
   // For problem 2, implement some code here to evaluate BVH
   // hint: use following function
   //   bvhnodes[i_bvhnode].intersect_bv(ray_org, ray_dir)
-
+  if (!bvhnodes[i_bvhnode].intersect_bv(ray_org, ray_dir)) {
+    return;
+  }
   if (bvhnodes[i_bvhnode].is_leaf()) { // this is leaf node
     const unsigned int i_tri = bvhnodes[i_bvhnode].i_node_left;
     // do something
+    const unsigned int start_tri = bvhnodes[i_bvhnode].i_node_left; 
+    unsigned int end_tri = bvhnodes[i_bvhnode].i_node_right; 
+     if (end_tri == std::numeric_limits<unsigned int>::max()) {
+      end_tri = start_tri; 
+    }
+     for (unsigned int i = start_tri; i <= end_tri; ++i) {
+      const auto res = ray_triangle_intersection(ray_org, ray_dir, i, tri2vtx, vtx2xyz);
+      if (res) {
+        // Update hit information if intersection found
+        const auto &[pos, nrm] = res.value();
+        const float depth = (pos - ray_org).dot(ray_dir);
+        if (depth < hit_depth) {
+          is_hit = true;
+          hit_depth = depth;
+          hit_pos = pos;
+          hit_normal = nrm;
+        }
+      }
+    }
+    return;
+
   } else { // this is branch node
     unsigned int i_node_right = bvhnodes[i_bvhnode].i_node_right;
     unsigned int i_node_left =bvhnodes[i_bvhnode].i_node_left;
+    search_collision_in_bvh(is_hit, hit_depth, hit_pos, hit_normal, i_node_left, ray_org, ray_dir, tri2vtx, vtx2xyz, bvhnodes);
+    search_collision_in_bvh(is_hit, hit_depth, hit_pos, hit_normal, i_node_right, ray_org, ray_dir, tri2vtx, vtx2xyz, bvhnodes);
     // do something (hint recursion)
   }
 }
@@ -148,7 +179,7 @@ auto find_intersection_between_ray_and_triangle_mesh(
   Eigen::Vector3f hit_normal;
 
   // for Problem 2,3,4, comment out from here
-  for (unsigned int i_tri = 0; i_tri < tri2vtx.rows(); ++i_tri) {
+  /*for (unsigned int i_tri = 0; i_tri < tri2vtx.rows(); ++i_tri) {
     const auto res = ray_triangle_intersection(ray_org, ray_dir, i_tri, tri2vtx, vtx2xyz);
     if (!res) { continue; }
     const auto& [q0,n0] = res.value();
@@ -159,7 +190,7 @@ auto find_intersection_between_ray_and_triangle_mesh(
       hit_pos = q0;
       hit_normal = n0;
     }
-  }
+  }*/
   // comment out end
 
   // do not edit from here
@@ -213,7 +244,7 @@ int main() {
         img_data_nrm[(ih * img_width + iw) * 3 + 1] = nrm.y() * 0.5f + 0.5f;
         img_data_nrm[(ih * img_width + iw) * 3 + 2] = nrm.z() * 0.5f + 0.5f;
       }
-      continue; // comment out here for Problem 3,4
+      //continue; // comment out here for Problem 3,4
       //
       if (res) { // ambient occlusion computation
         const unsigned int num_sample_ao = 100;
@@ -225,7 +256,22 @@ int main() {
           const auto res1 = find_intersection_between_ray_and_triangle_mesh(
               pos0, dir, tri2vtx, vtx2xyz, bvhnodes);
           if (!res1) { // if the ray doe not hit anything
-            sum += 1.f; // Problem 3: This is a bug. write some correct code (hint: use `dir.dot(nrm)`, `pdf`, `M_PI`).
+            //sum += 1.f; // Problem 3: This is a bug. write some correct code (hint: use `dir.dot(nrm)`, `pdf`, `M_PI`).
+            const auto&[pos, nrm] = res.value(); 
+            Eigen::Vector3f pos0 = pos + nrm * 0.001f;
+            float occlusion_sum = 0;
+            for (unsigned int i_sample = 0; i_sample < num_sample_ao; ++i_sample) {
+              const auto[dir, pdf] = sample_hemisphere(nrm); 
+              auto l2w_trans = local_to_world_vector_transformation(nrm); 
+              const auto dir_world = l2w_trans * dir;
+              const auto res2 = find_intersection_between_ray_and_triangle_mesh(pos0, dir_world, tri2vtx, vtx2xyz, bvhnodes);
+              if (!res2) {
+                const float cos_theta = std::max(0.0f, nrm.dot(dir));
+                occlusion_sum += cos_theta / pdf;
+          }
+        }
+            float occlusion = occlusion_sum / num_sample_ao;
+            sum += occlusion;
           }
         }
         img_data_ao[ih * img_width + iw] = sum / float(num_sample_ao); // do not change
