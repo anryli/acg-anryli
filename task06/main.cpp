@@ -66,7 +66,7 @@ auto sample_hemisphere(
   auto l2w_trans = local_to_world_vector_transformation(nrm);
   // end of Problem 4. Do not modify the two lines below
   const auto dir_out = local_to_world_vector_transformation(nrm) * dir_loc; // rotate the sample (zup -> nrm)
-  return {dir_out, pdf};///
+  return {dir_out, pdf};///////
 }
 
 /**
