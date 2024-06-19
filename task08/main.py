@@ -95,6 +95,7 @@ class HelloWorld(mglw.WindowConfig):
             # below, write one or two lines of code to compute `bone2globalTransformation[i_bone]`
             # hint: use numpy.matmul for multiplying nd-array
             # bone2globalTransformation[i_bone] = ???
+            bone2globalTransformation[i_bone] = np.matmul(bone2globalTransformation[i_bone_parent], bone2relativeTransformation[i_bone])
 
         for i_vtx in range(self.vtx2xyz_ini.shape[0]):  # for each point in mesh
             p0 = self.vtx2xyz_ini[i_vtx]
@@ -110,6 +111,9 @@ class HelloWorld(mglw.WindowConfig):
                 # hint: assume that rig weights w add up to one
 
                 # p1 += ???
+                transformMatrix = np.matmul(globalTransformation, inverseBindingMatrix)
+                transformedVertex = np.matmul(transformMatrix, p0)
+                p1 += w * transformedVertex
 
             self.vtx2xyz_def[i_vtx] = p1[:3]  # from homogeneous coordinates to the Cartesian coordinates
 
@@ -159,6 +163,8 @@ class HelloWorld(mglw.WindowConfig):
 
         # take a screenshot
         if not self.is_screenshot_taken and time > 1.8:
+            print("screenshot is taken")
+            print(os.walk())
             self.is_screenshot_taken = True
             rgb = np.frombuffer(self.ctx.fbo.read(), dtype=np.uint8)
             rgb = rgb.reshape(self.ctx.fbo.size[0], self.ctx.fbo.size[1], 3)
