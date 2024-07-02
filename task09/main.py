@@ -6,6 +6,7 @@ import numpy
 import pyrr
 import numpy as np
 import moderngl
+import scipy
 import moderngl_window as mglw
 from PIL import Image, ImageOps
 from scipy import sparse
@@ -138,8 +139,24 @@ class HelloWorld(mglw.WindowConfig):
         # L is the graph Laplacian matrix a.k.a `self.matrix_laplace`
         # you may use `spsolve` to solve the liner system
         # spsolve: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html#scipy.sparse.linalg.spsolve
-
-
+        
+        D = self.matrix_fix
+        L = self.matrix_laplace
+    
+        A = D + L
+        b = D.dot(self.vtx2xyz_def)+L.dot(self.vtx2xyz_ini)
+       
+        laplace=scipy.sparse.linalg.spsolve(A, b)
+        self.vtx2xyz_def [:]=laplace
+        
+        L2 = L.dot(L)
+        A_bi_laplace = D + L2
+        b_bi_laplace = D.dot(self.vtx2xyz_def) + L2.dot(self.vtx2xyz_ini)
+    
+        x_bi_laplace = scipy.sparse.linalg.spsolve(A_bi_laplace, b_bi_laplace)
+        self.vtx2xyz_def[:] = x_bi_laplace
+        
+        #self.vtx2xyz_def = numpy.ascontiguousarray(self.vtx2xyz_def)
         # do not edit beyond here
         # above: deformation
         # ---------------------
@@ -151,7 +168,7 @@ class HelloWorld(mglw.WindowConfig):
         self.vbo_vtx2xyz_def.write(self.vtx2xyz_def)  # send vertex information to GPU
         vtx2nrm = util_for_task09.vtx2nrm(self.tri2vtx, self.vtx2xyz_def)
         self.vbo_vtx2nrm_def.write(vtx2nrm)  # send normal information to GPU
-
+        self.vtx2xyz_def[:] = x_bi_laplace
         # make view transformation
         view_rot_z = pyrr.Matrix44.from_z_rotation(-np.pi * 0.2)
         view_rot_x = pyrr.Matrix44.from_x_rotation(np.pi * 0.4)
